@@ -1,0 +1,290 @@
+SIOFS is a very simple serial protocol for performing file I/O on a remote device over serial. Designed originally for PlayStation homebrew it can be adapted for other devices with a serial interface. The protocol does not require hardware handshaking and is kept simple for easy integration.
+
+~FRS - Reset/init.
+
+	Closes all previously opened file handles, resets current directory and returns siofs protocol version from the host.
+	
+	Protocol:
+		[S] ~FRS	- Command.
+		[R]	short	- Server version.
+					bits 0-7 - Minor number.
+					bits 8-15 - Major number.
+
+
+~FOP - File open.
+
+	Opens a file on the remote device.
+	
+	Protocol:
+		[S] ~FOP	- Command.
+		[R] char	- Command accept ('K').
+		[S] short	- File flags.
+					bit 0 - Read.
+					bit 1 - Write.
+					bit 2 - Binary.
+			short	- File name length.
+			char(*)	- File name string (max 128 bytes).
+		[R] char	- Return code.
+					>=0	- File handle.
+					-1	- File not found/cannot create file.
+					-2	- No new available handles.
+
+
+~FCL - File close.
+
+	Closes an open file handle.
+	
+	Protocol:
+		[S] ~FCL	- Command.
+		[R] char	- Command accept ('K').
+		[S] char	- File handle.
+		[R] char	- Return code.
+					0 - Close ok.
+					1 - Unopened handle.
+					2 - Invalid handle.
+
+					
+~FWR - Write to file.
+
+	Writes data to a file.
+	
+	CRC check is optional and can be disabled by specifying a value of 0 for the checksum. This will disable CRC check on the host side.
+	
+	Protocol:
+		[S] ~FWR	- Command.
+		[R] char	- Command accept ('K').
+		[S] short	- File handle.
+			u_short	- CRC16 checksum of data to send.
+			int		- Write length.
+		[R] byte	- Return code.
+					0 - Ok.
+					1 - Handle not open.
+					2 - Invalid handle.
+		[S]	byte(*)	- Data to write.
+		[R] int		- Return code.
+					>0 - Bytes written.
+					-1 - Write error on host.
+					-2 - CRC16 mismatch, resend.
+					-3 - Data incomplete, resend.
+
+
+~FRD - Read from file.
+
+	Reads data from a file.
+	
+	CRC check is optional and can be ignored by sending an Ok response code anyway.
+	
+	Protocol:
+		[S] ~FRD	- Command.
+		[R]	K		- Command accepted.
+		[S] short	- File handle.
+			short	- Padding/reserved.
+			int		- Length.
+		[R] short	- Response code.
+					0 - Ok.
+					1 - Unopened handle.
+					2 - Invalid handle.
+					3 - Read error on remote device.
+					4 - EOF reached.
+			u_short	- CRC16 checksum of read data.
+			int		- Read length.
+		[S] char	- Acknoledge ('K').
+		[R] byte(*)	- Read data.
+		[S]	byte	- Response code.
+					0 - Ok.
+					1 - Data incomplete, resend.
+					2 - CRC16 mismatch, resend.
+					
+					
+~FRQ - Quick read from file.
+
+	Read data from a file with a single call. Reads in binary mode only.
+
+	CRC check is optional and can be ignored by sending an Ok response code anyway.
+	
+	Protocol:
+		[S] ~FRQ	- Command.
+		[R] char	- Command accept ('K').
+		[S]	byte	- File name length.
+			char(*)	- File name.
+		[R] byte	- Response code.
+					0 - Ok.
+					1 - File not found or cannot open file.
+		[S]	int		- Read length.
+			int		- Read offset.
+		[R]	short	- Response code.
+					0 - Ok.
+					1 - Read error.
+					2 - Invalid position.
+			u_short	- CRC16 checksum.
+			int		- Data read length.
+		[S] char	- Begin sending data ('K').
+		[R] byte(*)	- Read data.
+		[S]			- Response code.
+					0 - Ok.
+					1 - Data incomplete, resend.
+					2 - Checksum error, resend.
+
+~FGS - Gets string from file.
+
+	Reads a string from a file.
+	
+	Protocol:
+		[S] ~FGS	- Command.
+		[R]	K		- Command accepted.
+		[S] short	- File handle.
+			short	- Padding/reserved.
+			int		- Length.
+		[R] short	- Response code.
+					0 - Ok.
+					1 - Unopened handle.
+					2 - Invalid handle.
+					3 - Read error on remote device.
+					4 - EOF reached.
+			u_short	- CRC16 checksum of read string.
+			int		- Read length.
+		[S] char	- Acknoledge ('K').
+		[R] byte(*)	- Read data.
+		[S]	byte	- Response code.
+					0 - Ok.
+					1 - Data incomplete, resend.
+					2 - CRC16 mismatch, resend.
+
+
+~FSK - Seek file.
+
+	Set opened file's position.
+	
+	Protocol:
+		[S] ~FSK	- Command.
+		[R] char	- Command accept ('K').
+		[S] short	- File handle.
+			short	- Seek mode.
+					0 - Absolute seek (SEEK_SET).
+					1 - Seek from current position (SEEK_CUR).
+					2 - Seek to end (SEEK_END).
+			word	- Seek position.
+		[R] byte	- Response code.
+					0 - Ok.
+					1 - Unopened handle.
+					2 - Invalid handle.
+					3 - Seek error.
+
+
+~FTL - File position.
+
+	Get current file position.
+	
+	Protocol:
+		[S] ~FTL	- Command.
+		[R] char	- Command accept ('K').
+		[S] char	- File handle.
+		[R] int		- Response code.
+					>0 - Current position.
+					-1 - Unopened handle.
+					-2 - Invalid handle.
+
+
+~FLF - File list first.
+
+	Begin directory querying.
+	
+	Protocol:
+		[S] ~FLF	- Command.
+		[R] char	- Command accept ('K').
+		[S] char	- Wildcard string length.
+			char(*)	- Wildcard.
+		[R] int		- File size/return code.
+					>=0	- File size.
+					-1	- Cannot open directory.
+					-2	- Empty directory.		
+			< the rest is not sent if return code is negative >
+			u_int	- File date stamp.
+					bit 0-5		- Seconds.
+					bit 6-11	- Minutes.
+					bit 12-15	- Hours.
+					bit 16-20	- Day.
+					bit 21-24	- Month.
+					bit 25-31	- Year (since 1980).
+			short	- File flags.
+					bit 0 - Directory.
+					bit 1 - Read only.
+			short	- File name length (max 128 bytes).
+		[S] char	- Acknoledge ('K').
+		[R]	char(*)	- File name string.
+		
+		
+~FLN - File list next.
+		
+	Query for next directory.
+	
+	Protocol:
+		[S] ~FLN	- Command.
+		[R] int		- File size/return code.
+					>= - File size.
+					-1 - First query not issued.
+					-2 - No more files.
+			< the rest is not sent if return code is negative >
+			short	- File flags.
+					bit 0 - Directory.
+					bit 1 - Read only.
+			short	- File name length (max 128 bytes).
+
+			
+~FLS - File list.
+
+	Query directory contents with a single call.
+
+	Protocol:
+		[S] ~FLS	- Command.
+		[R] K		- Command accept ('K')
+		[S]	short	- Max number of entries to query.
+			short	- Query offset.
+			byte	- Wildcard name length.
+			char(*)	- Wildcard string.
+		[R] short	- Items listed.
+			short	- Total items.
+		[S] char	- 'K'
+		
+
+~FST - Stat file.
+
+	Get a file's attributes such as size, date stamp and flags.
+
+	Protocol:
+		[S] ~FST		- Command.
+		[R] K			- Command accept ('K').
+		[S] byte		- File name length.
+			char(*)		- File name string (max 128 bytes).
+		[R] int			- File size/return code.
+						>=0	- File size.
+						-1	- File not found.
+			int			- File date stamp.
+			byte		- File flags.
+						bit 0 - Directory
+						bit 1 - Read-only
+							
+							
+~FCD - Change directory.
+
+	Changes current directory of the host.
+
+	Protocol:
+		[S] ~FCD		- Command.
+		[R] K			- Command accept ('K').
+		[S] u_char		- File name length.
+			char(*)		- File name string (max 128 bytes).
+		[R] u_char		- Return code.
+							0 - Ok.
+							1 - Error changing directory.
+							
+							
+~FWD - Get current directory path.
+
+	Get the path string of the host's current directory.
+
+	Protocol:
+		[S] ~FWD		- Command.
+		[R] u_char		- Path length.
+		[R] char(*)		- Path string.
+		
