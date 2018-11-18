@@ -46,7 +46,7 @@ SerialClass::~SerialClass() {
 	
 }
 
-SerialClass::ErrorType SerialClass::OpenPort(const char* name) {
+SerialClass::ErrorType SerialClass::OpenPort(const char* name, int rate) {
 	
 #ifdef __WIN32__
 	if ( hComm != INVALID_HANDLE_VALUE ) {
@@ -71,7 +71,7 @@ SerialClass::ErrorType SerialClass::OpenPort(const char* name) {
 		return ERROR_CONFIG;
 	}
 	
-	dcbSerialParams.BaudRate = CBR_9600;  // Setting BaudRate = 9600
+	dcbSerialParams.BaudRate = rate;	  // Setting BaudRate = 9600
 	dcbSerialParams.ByteSize = 8;         // Setting ByteSize = 8
 	dcbSerialParams.StopBits = ONESTOPBIT;// Setting StopBits = 1
 	dcbSerialParams.Parity   = NOPARITY;  // Setting Parity = None

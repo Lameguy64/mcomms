@@ -21,7 +21,7 @@
 #include "SerialClass.h"
 #include "SiofsClass.h"
 
-#define VERSION "0.80"
+#define VERSION "0.82"
 
 #ifdef __WIN32__
 #define SERIAL_DEFAULT "COM1"
@@ -34,9 +34,12 @@ int serial_baud = 115200;
 
 std::string psexe_file;
 std::string bin_file;
+std::string pat_file;
 unsigned int bin_addr;
 
+int old_protocol = false;
 int terminal_mode = false;
+int no_console = false;
 int hex_mode = false;
 extern int fs_messages;
 
@@ -116,6 +119,7 @@ typedef struct {
 typedef struct {
 	EXEC params;
 	unsigned int crc32;
+	unsigned int flags;
 } EXEPARAM;
 
 typedef struct {
@@ -314,8 +318,8 @@ int uploadEXE(const char* exefile, SerialClass* serial) {
 	fclose(fp);
 	
 	param.crc32 = crc32(buffer, param.params.t_size, CRC32_REMAINDER);
+	param.flags = 0;
 	
-	serial->SetRate(115200);
 	serial->SendBytes((void*)"MEXE", 4);
 	
 	char reply[4];
@@ -336,7 +340,11 @@ int uploadEXE(const char* exefile, SerialClass* serial) {
 		return -1;
 	}
 	
-	serial->SendBytes(&param, sizeof(EXEPARAM));
+	if( !old_protocol ) {
+		serial->SendBytes(&param, sizeof(EXEPARAM));
+	} else {
+		serial->SendBytes(&param, sizeof(EXEPARAM)-4);
+	}
 	Sleep(20);
 	serial->SendBytes(buffer, param.params.t_size);
 	
@@ -346,7 +354,7 @@ int uploadEXE(const char* exefile, SerialClass* serial) {
 	
 }
 
-int uploadBIN(const char* file, unsigned int addr, SerialClass* serial) {
+int uploadBIN(const char* file, unsigned int addr, SerialClass* serial, int patch) {
 	
 	BINPARAM param;
 	char* buffer;
@@ -373,8 +381,11 @@ int uploadBIN(const char* file, unsigned int addr, SerialClass* serial) {
 	
 	fclose(fp);
 	
-	serial->SetRate(115200);
-	serial->SendBytes((void*)"MBIN", 4);
+	if( patch ) {
+		serial->SendBytes((void*)"MPAT", 4);
+	} else {
+		serial->SendBytes((void*)"MBIN", 4);
+	}
 	
 	char reply[4];
 	int timeout = true;
@@ -418,7 +429,7 @@ int main(int argc, char** argv) {
 	
 	if ( argc >= 2 ) {
 		
-		if ( strcmp( "-h", argv[1] ) == 0 ) {
+		if( ( strcmp( "-h", argv[1] ) == 0 ) || ( strcmp( "-?", argv[1] ) == 0 ) ) {
 			
 			std::cout << "Usage:" << std::endl;
 			std::cout << "  mcomms [-dev <device>] [-baud <rate>] [-dir <path>] [-term] [-fsmsg]" <<
@@ -432,10 +443,13 @@ int main(int argc, char** argv) {
 			std::cout << "    -term         - Enable terminal mode (forward keystrokes to serial)." << std::endl;
 			std::cout << "    -hex          - Output received data in hex." << std::endl;
 #endif
-			std::cout << "    -fsmsg        - Enable SIOFS messages." << std::endl << std::endl;
+			std::cout << "    -fsmsg        - Enable SIOFS messages." << std::endl;
+			std::cout << "    -nocons       - Quit immediately, no console mode." << std::endl;
+			std::cout << "    -old          - Use old LITELOAD 1.0 protocol." << std::endl << std::endl;
 
 			std::cout << "  LITELOAD Parameters (catflap inspired):" << std::endl;
 			std::cout << "    up <file> <addr> - Upload a file to specified address." << std::endl;
+			std::cout << "    patch <file>     - Upload a patch binary." << std::endl;
 			std::cout << "    run <file>       - Upload a PS-EXE file (CPE format is supported)." << std::endl << std::endl;
 			std::cout << "    Specified memory address must be in hex." << std::endl << std::endl;
 
@@ -499,6 +513,14 @@ int main(int argc, char** argv) {
 			hex_mode = true;
 			
 #endif
+		} else if ( strcmp("-nocons", argv[i]) == 0 ) {
+			
+			no_console = true;
+			
+		} else if ( strcmp("-old", argv[i]) == 0 ) {
+			
+			old_protocol = true;
+			
 		} else if ( strcmp("-fsmsg", argv[i]) == 0 ) {
 			
 			fs_messages = true;
@@ -513,6 +535,16 @@ int main(int argc, char** argv) {
 			psexe_file = argv[i];
 			break;
 		
+		} else if ( strcmp("patch", argv[i]) == 0 ) {
+			
+			i++;
+			if ( i >= argc ) {
+				std::cout << "Missing filename parameter." << std::endl;
+				return EXIT_FAILURE;
+			}
+			pat_file = argv[i];
+			break;
+			
 		} else if ( strcmp("up", argv[i]) == 0 ) {
 			
 			i++;
@@ -538,7 +570,7 @@ int main(int argc, char** argv) {
 		
 	}
 	
-	switch( serial.OpenPort(serial_device.c_str()) ) {
+	switch( serial.OpenPort(serial_device.c_str(), serial_baud) ) {
 		case SerialClass::ERROR_OPENING:
 			std::cout << "ERROR: Unable to open " << serial_device << "." << std::endl;
 			return EXIT_FAILURE;
@@ -547,35 +579,51 @@ int main(int argc, char** argv) {
 			return EXIT_FAILURE;
 	}
 	
-	// Upload binary file if specified
-	if ( !bin_file.empty() ) {
+	// Upload patch data
+	if( !pat_file.empty() ) {
 		
-		std::cout << "Uploading binary file..." << std::endl;
+		std::cout << "Uploading patch file..." << std::endl;
 		
-		if ( uploadBIN(bin_file.c_str(), bin_addr, &serial) < 0 ) {
+		if( uploadBIN(pat_file.c_str(), 0, &serial, 1) < 0 ) {
+			serial.ClosePort();
 			return EXIT_FAILURE;
 		}
 		
+		serial.ClosePort();
+		return EXIT_SUCCESS;
+		
+	}
+	
+	// Upload binary file if specified
+	if( !bin_file.empty() ) {
+		
+		std::cout << "Uploading binary file..." << std::endl;
+		
+		if( uploadBIN(bin_file.c_str(), bin_addr, &serial, 0) < 0 ) {
+			serial.ClosePort();
+			return EXIT_FAILURE;
+		}
+		
+		serial.ClosePort();
 		return EXIT_SUCCESS;
 		
 	}
 	
 	// Upload executable if specified
-	if ( !psexe_file.empty() ) {
+	if( !psexe_file.empty() ) {
 		
 		std::cout << "Uploading executable..." << std::endl;
 		
 		if ( uploadEXE(psexe_file.c_str(), &serial) < 0 ) {
+			serial.ClosePort();
 			return EXIT_FAILURE;
 		}
 		
 	}
 	
-	
-	// Set serial speed
-	if ( serial.SetRate(serial_baud) != SerialClass::OK ) {
-		std::cout << "ERROR: Unsupported baud rate specified for " << serial_device << "." << std::endl;
-		return EXIT_FAILURE;
+	if( no_console ) {
+		serial.ClosePort();
+		return EXIT_SUCCESS;
 	}
 	
 	std::cout << "Listening " << serial_device << " at " << serial_baud << " baud." << std::endl;

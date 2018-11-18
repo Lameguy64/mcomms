@@ -648,6 +648,8 @@ void SiofsClass::FsWrite() {
 		
 	}
 	
+	std::cout << "FS: Wrote " << info.length << " bytes." << std::endl;
+	
 	ret = fwrite(buffer, 1, info.length, handles[info.fd]);
 	free(buffer);
 	

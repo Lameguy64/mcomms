@@ -32,7 +32,7 @@ public:
 		ERROR_WRITE_FAIL,
 	};
 	
-	ErrorType OpenPort(const char* name);
+	ErrorType OpenPort(const char* name, int rate);
 	ErrorType SetRate(int rate);
 	void ClosePort();
 	
