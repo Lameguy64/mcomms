@@ -1,10 +1,3 @@
-/* 
- * File:   SiofsClass.cpp
- * Author: Lameguy64
- * 
- * Created on June 2, 2018, 9:07 PM
- */
-
 #ifdef __WIN32__
 #include <windows.h>
 #include <shlwapi.h>
@@ -17,8 +10,8 @@
 #include <iostream>
 #include <vector>
 #include <unistd.h>
-#include "SerialClass.h"
-#include "SiofsClass.h"
+#include "serial.h"
+#include "siofs.h"
 
 int fs_messages = false;
 
@@ -143,7 +136,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	if ( strcmp(cmd, "~FRS") == 0 ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: Reset/init." << std::endl;
+			printf( "FS: Reset/init.\n" );
 		}
 		
 		FsInit();
@@ -152,7 +145,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FOP") == 0 ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: File open." << std::endl;
+			printf( "FS: File open.\n" );
 		}
 		
 		FsOpen();
@@ -162,7 +155,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FCL") == 0 ) {
 
 		if ( fs_messages ) {
-			std::cout << "FS: File close." << std::endl;
+			printf( "FS: File close.\n" );
 		}
 		
 		FsClose();
@@ -172,7 +165,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FRQ") == 0 ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: File read quick." << std::endl;
+			printf( "FS: File read quick.\n" );
 		}
 		
 		FsReadQuick();
@@ -182,7 +175,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FWR") == 0 ) {
 
 		if ( fs_messages ) {
-			std::cout << "FS: File write." << std::endl;
+			printf( "FS: File write.\n" );
 		}
 		
 		FsWrite();
@@ -192,7 +185,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FRD") == 0 ) {
 
 		if ( fs_messages ) {
-			std::cout << "FS: File read." << std::endl;
+			printf( "FS: File read.\n" );
 		}
 		
 		FsRead();
@@ -202,7 +195,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FGS") == 0 ) {
 
 		if ( fs_messages ) {
-			std::cout << "FS: File gets." << std::endl;
+			printf( "FS: File gets.\n" );
 		}
 		
 		FsGets();
@@ -212,7 +205,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FSK") == 0 ) {
 
 		if ( fs_messages ) {
-			std::cout << "FS: File seek." << std::endl;
+			printf( "FS: File seek.\n" );
 		}
 		
 		FsSeek();
@@ -222,7 +215,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FTL") == 0 ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: File tell." << std::endl;
+			printf( "FS: File tell.\n" );
 		}
 		
 		FsTell();
@@ -232,7 +225,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FLF") == 0 ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: File list first." << std::endl;
+			printf( "FS: File list first.\n" );
 		}
 		
 		FsDirFirst();
@@ -242,7 +235,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FLN") == 0 ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: File list next." << std::endl;
+			printf( "FS: File list next.\n" );
 		}
 	
 		FsDirNext();
@@ -252,7 +245,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FLS") == 0 ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: File list." << std::endl;
+			printf( "FS: File list.\n" );
 		}
 		
 		FsDirList();
@@ -262,7 +255,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FST") == 0 ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: File stat." << std::endl;
+			printf( "FS: File stat.\n" );
 		}
 		
 		FsStat();
@@ -271,7 +264,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FCD") == 0 ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: File change directory." << std::endl;
+			printf( "FS: File change directory.\n" );
 		}
 		
 		FsChangeDir();
@@ -280,7 +273,7 @@ int SiofsClass::Query(const char* cmd, SerialClass* comm) {
 	} else if ( strcmp(cmd, "~FWD") == 0 ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: File working directory." << std::endl;
+			printf( "FS: File working directory.\n" );
 		}
 		
 		FsWorkDir();
@@ -339,7 +332,7 @@ void SiofsClass::FsOpen() {
 	// Receive flags and file name length
 	if ( serial->ReceiveBytes(&file, 4) != 4 ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
@@ -349,7 +342,7 @@ void SiofsClass::FsOpen() {
 	serial->ReceiveBytes(file.filename, file.length);
 	
 	if ( fs_messages ){
-		std::cout << "FS: File = " << file.filename << std::endl;
+		printf( "FS: File = %s\n", file.filename );
 	}
 	
 	// Search for a vacant handle
@@ -380,7 +373,7 @@ void SiofsClass::FsOpen() {
 	}
 	
 	if ( fs_messages ) {
-		std::cout << "FS: mode = " << fparam << std::endl;
+		printf( "FS: mode = %d\n", fparam );
 	}
 	
 	// File open
@@ -389,7 +382,7 @@ void SiofsClass::FsOpen() {
 	if ( !fp ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: ERROR - Cannot open file." << std::endl;
+			printf( "FS: ERROR - Cannot open file." );
 		}
 		
 		fparam[0] = -1;
@@ -400,7 +393,7 @@ void SiofsClass::FsOpen() {
 	
 	// Set and send file handle number
 	if ( fs_messages ) {
-		std::cout << "FS: Handle = " << hnum << std::endl;
+		printf( "FS: Handle = %s\n", hnum );
 	}
 	
 	handles[hnum] = fp;
@@ -426,7 +419,7 @@ void SiofsClass::FsReadQuick() {
 	serial->ReceiveBytes(filename, ret);
 	
 	if ( fs_messages ) {
-		std::cout << "FS: Filename = " << filename << std::endl;
+		printf( "FS: Filename = %s\n", filename );
 	}
 	
 	// Open requested file
@@ -449,15 +442,15 @@ void SiofsClass::FsReadQuick() {
 		!= sizeof(SFS_READSTRUCT) ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		
 		return;
 		
 	}
 	
-	std::cout << "FS: Length = " << param.length << std::endl;
-	std::cout << "FS: Offset = " << param.offset << std::endl;
+	printf( "FS: Length = %d\n", param.length );
+	printf( "FS: Offset = %d\n", param.offset );
 	
 	if ( fseek(fp, param.offset, SEEK_SET) ) {
 		ret = 2;
@@ -490,7 +483,7 @@ void SiofsClass::FsReadQuick() {
 	if ( serial->ReceiveBytes(&ret, 1) != 1 ) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 			return;
 		}
 		
@@ -506,7 +499,7 @@ void SiofsClass::FsReadQuick() {
 		if ( serial->ReceiveBytes(&ret, 2) != 2 ) {
 		
 			if ( fs_messages ) {
-				std::cout << "FS: Timeout H." << std::endl;
+				printf( "FS: Timeout H.\n" );
 				return;
 			}
 
@@ -537,13 +530,13 @@ void SiofsClass::FsClose() {
 	
 	if ( serial->ReceiveBytes(&hnum, 1) != 1 ) {
 		if ( fs_messages ) {
-		std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
 	
 	if ( fs_messages ) {
-		std::cout << "FS: File handle " << std::to_string(hnum) << std::endl;
+		printf( "FS: File handle = %d\n", hnum );
 	}
 	
 	ret = TestHandle(hnum);
@@ -579,15 +572,15 @@ void SiofsClass::FsWrite() {
 	
 	if ( serial->ReceiveBytes(&info, sizeof(SFS_WRITESTRUCT)) != sizeof(SFS_WRITESTRUCT) ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
 	
 	if ( fs_messages ) {
-		std::cout << "FS: Handle = " << std::to_string(info.fd) << std::endl;
-		std::cout << "FS: Chksum = " << std::to_string(info.crc16) << std::endl;
-		std::cout << "FS: Length = " << std::to_string(info.length) << std::endl;
+		printf( "FS: Handle = %d\n", info.fd );
+		printf( "FS: Chksum = %04x\n", info.crc16 );
+		printf( "FS: Length = %d\n", info.length );
 	}
 	int ret = TestHandle(info.fd);
 	
@@ -615,7 +608,7 @@ void SiofsClass::FsWrite() {
 
 			if ( ret <= 0 ) {
 				if ( fs_messages ) {
-					std::cout << "FS: Timeout." << std::endl;
+					printf( "FS: Timeout.\n" );
 				}
 				return;
 			}
@@ -628,7 +621,7 @@ void SiofsClass::FsWrite() {
 		if ( received < info.length ) {
 			ret = -3;
 			if ( fs_messages ) {
-				std::cout << "FS: Data incomplete. Retrying." << std::endl;
+				printf( "FS: Data incomplete. Retrying.\n" );
 			}
 			serial->SendBytes(&ret, 4);
 			continue;
@@ -638,7 +631,7 @@ void SiofsClass::FsWrite() {
 		if ( crc16(buffer, info.length, 0) != info.crc16 ) {
 			ret = -2;
 			if ( fs_messages ) {
-				std::cout << "FS: CRC mismatch. Retrying." << std::endl;
+				printf( "FS: CRC mismatch. Retrying.\n" );
 			}
 			serial->SendBytes(&ret, 4);
 			continue;
@@ -648,7 +641,7 @@ void SiofsClass::FsWrite() {
 		
 	}
 	
-	std::cout << "FS: Wrote " << info.length << " bytes." << std::endl;
+	printf( "FS: Wrote %d bytes.\n", info.length );
 	
 	ret = fwrite(buffer, 1, info.length, handles[info.fd]);
 	free(buffer);
@@ -671,14 +664,14 @@ void SiofsClass::FsRead() {
 	
 	if ( serial->ReceiveBytes(&info, sizeof(SFS_READSTRUCT)) != sizeof(SFS_READSTRUCT) ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
 	
 	if ( fs_messages ) {
-		std::cout << "FS: Handle = " << std::to_string(info.fd) << std::endl;
-		std::cout << "FS: Length = " << std::to_string(info.length) << std::endl;
+		printf( "FS: Handle = %d\n", info.fd );
+		printf( "FS: Length = %d\n", info.length );
 	}
 	
 	int ret = TestHandle(info.fd);
@@ -717,7 +710,7 @@ void SiofsClass::FsRead() {
 	ret = 0;
 	if ( serial->ReceiveBytes(&ret, 1) != 1 ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		free(buffer);
 		return;
@@ -730,7 +723,7 @@ void SiofsClass::FsRead() {
 		ret = 0;
 		if ( serial->ReceiveBytes(&ret, 1) != 1 ) {
 			if ( fs_messages ) {
-				std::cout << "FS: Timeout." << std::endl;
+				printf( "FS: Timeout.\n" );
 			}
 			free(buffer);
 			return;
@@ -738,14 +731,14 @@ void SiofsClass::FsRead() {
 		
 		if ( ret == 1 ) {
 			if ( fs_messages ) {
-				std::cout << "FS: Data incomplete on client. Retrying." << std::endl;
+				printf( "FS: Data incomplete on client. Retrying.\n" );
 			}
 			continue;
 		}
 		
 		if ( ret == 2 ) {
 			if ( fs_messages ) {
-				std::cout << "FS: CRC16 mismatch on client. Retrying." << std::endl;
+				printf( "FS: CRC16 mismatch on client. Retrying.\n" );
 			}
 			continue;
 		}
@@ -768,14 +761,14 @@ void SiofsClass::FsGets() {
 	
 	if ( serial->ReceiveBytes(&info, sizeof(SFS_READSTRUCT)) != sizeof(SFS_READSTRUCT) ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
 	
 	if ( fs_messages ) {
-		std::cout << "FS: Handle = " << std::to_string(info.fd) << std::endl;
-		std::cout << "FS: Length = " << std::to_string(info.length) << std::endl;
+		printf( "FS: Handle = %d\n", info.fd );
+		printf( "FS: Length = %d\n", info.length );
 	}
 	
 	int ret = TestHandle(info.fd);
@@ -818,7 +811,7 @@ void SiofsClass::FsGets() {
 	ret = 0;
 	if ( serial->ReceiveBytes(&ret, 1) != 1 ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		free(buffer);
 		return;
@@ -831,7 +824,7 @@ void SiofsClass::FsGets() {
 		ret = 0;
 		if ( serial->ReceiveBytes(&ret, 1) != 1 ) {
 			if ( fs_messages ) {
-				std::cout << "FS: Timeout." << std::endl;
+				printf( "FS: Timeout.\n" );
 			}
 			free(buffer);
 			return;
@@ -839,14 +832,14 @@ void SiofsClass::FsGets() {
 		
 		if ( ret == 1 ) {
 			if ( fs_messages ) {
-				std::cout << "FS: Data incomplete on client. Retrying." << std::endl;
+				printf( "FS: Data incomplete on client. Retrying.\n" );
 			}
 			continue;
 		}
 		
 		if ( ret == 2 ) {
 			if ( fs_messages ) {
-				std::cout << "FS: CRC16 mismatch on client. Retrying." << std::endl;
+				printf( "FS: CRC16 mismatch on client. Retrying.\n" );
 			}
 			continue;
 		}
@@ -867,7 +860,7 @@ void SiofsClass::FsSeek() {
 	
 	if ( serial->ReceiveBytes(&info, sizeof(SFS_SEEKSTRUCT)) != sizeof(SFS_SEEKSTRUCT) ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
@@ -880,22 +873,22 @@ void SiofsClass::FsSeek() {
 	}
 	
 	if ( fs_messages ) {
-		std::cout << "FS: Handle = " << std::to_string(info.fd) << std::endl;
-		std::cout << "FS: Pos    = " << std::to_string(info.offs) << std::endl;
-		std::cout << "FS: Mode   = " << std::to_string(info.mode) << std::endl;
+		printf( "FS: Handle = %d\n", info.fd );
+		printf( "FS: Pos    = %d\n", info.offs );
+		printf( "FS: Mode   = %d\n", info.mode);
 	}
 	
 	int mode = SEEK_SET;
 	switch(info.mode) {
-		case 0:
-			mode = SEEK_SET;
-			break;
-		case 1:
-			mode = SEEK_CUR;
-			break;
-		case 2:
-			mode = SEEK_END;
-			break;
+	case 0:
+		mode = SEEK_SET;
+		break;
+	case 1:
+		mode = SEEK_CUR;
+		break;
+	case 2:
+		mode = SEEK_END;
+		break;
 	}
 	
 	if ( fseek(handles[info.fd], info.offs, mode) ) {
@@ -920,13 +913,13 @@ void SiofsClass::FsTell() {
 	hnum = 0;
 	if ( serial->ReceiveBytes(&hnum, 1) != 1 ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
 	
 	if ( fs_messages ) {
-		std::cout << "FS: File handle " << std::to_string(hnum) << std::endl;
+		printf( "FS: File handle = %d\n", hnum );
 	}
 	
 	ret = TestHandle(hnum);
@@ -966,7 +959,7 @@ void SiofsClass::FsDirFirst() {
 	// Receive file name length
 	if ( serial->ReceiveBytes(&length, 1) != 1 ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
@@ -977,7 +970,7 @@ void SiofsClass::FsDirFirst() {
 	serial->ReceiveBytes(dPattern, length);
 	
 	if ( fs_messages ) {
-		std::cout << "FS: Wildcard = " << dPattern << std::endl;
+		printf( "FS: Wildcard = %s\n", dPattern );
 	}
 	
 	if ( hDir ) {
@@ -988,7 +981,7 @@ void SiofsClass::FsDirFirst() {
 
 	if (hDir == nullptr) {
 		if ( fs_messages ) {
-			std::cout << "FS: ERROR: Cannot open directory." << std::endl;
+			printf( "FS: ERROR: Cannot open directory.\n" );
 		}
 		entry.size = -1;
 		serial->SendBytes(&entry, sizeof(SFS_DIRSTRUCT));
@@ -1055,13 +1048,13 @@ void SiofsClass::FsDirFirst() {
 	ret = 0;
 	if ( serial->ReceiveBytes(&ret, 1) != 1 ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
 	if ( ret != 'K' ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
@@ -1081,7 +1074,7 @@ void SiofsClass::FsDirNext() {
 	
 	if (hDir == nullptr) {
 		if ( fs_messages ) {
-			std::cout << "FS: ERROR: No directory open." << std::endl;
+			printf( "FS: ERROR: No directory open.\n" );
 		}
 		entry.size = -1;
 		serial->SendBytes(&entry, sizeof(SFS_DIRSTRUCT));
@@ -1146,13 +1139,13 @@ void SiofsClass::FsDirNext() {
 	ret = 0;
 	if ( serial->ReceiveBytes(&ret, 1) != 1 ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
 	if ( ret != 'K' ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
@@ -1180,7 +1173,7 @@ void SiofsClass::FsDirList() {
 	// Receive parameters
 	if ( serial->ReceiveBytes(&param, sizeof(SFS_DIRPARAM)) != sizeof(SFS_DIRPARAM) ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
@@ -1188,7 +1181,7 @@ void SiofsClass::FsDirList() {
 	// Receive wildcard length
 	if ( serial->ReceiveBytes(&length, 1) != 1 ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
@@ -1197,9 +1190,9 @@ void SiofsClass::FsDirList() {
 	serial->ReceiveBytes(wildcard, length);
 	
 	if ( fs_messages ) {
-		std::cout << "FS: items  = " << std::to_string(param.num) << std::endl;
-		std::cout << "FS: offset = " << std::to_string(param.offset) << std::endl;
-		std::cout << "FS: Wildcard = " << wildcard << std::endl;
+		printf( "FS: items    = %d\n", param.num );
+		printf( "FS: offset   = %d\n", param.offset );
+		printf( "FS: Wildcard = %s\n", wildcard );
 	}
 	
 	// Close dir handle if opened previously
@@ -1216,7 +1209,7 @@ void SiofsClass::FsDirList() {
 	if (hDir == nullptr) {
 		
 		if ( fs_messages ) {
-			std::cout << "FS: ERROR: Cannot open directory." << std::endl;
+			printf( "FS: ERROR: Cannot open directory.\n" );
 		}
 		
 		param2.num = -1;
@@ -1305,14 +1298,14 @@ void SiofsClass::FsDirList() {
 		ret = 0;
 		if ( serial->ReceiveBytes(&ret, 1) != 1 ) {
 			if ( fs_messages ) {
-				std::cout << "FS: Timeout." << std::endl;
+				printf( "FS: Timeout.\n" );
 			}
 			return;
 		}
 		
 		if ( ret != 'K' ) {
 			if ( fs_messages ) {
-				std::cout << "FS: Timeout." << std::endl;
+				printf( "FS: Timeout.\n" );
 			}
 			return;
 		}
@@ -1341,7 +1334,7 @@ void SiofsClass::FsStat() {
 	ret = 0;
 	if ( serial->ReceiveBytes(&ret, 1) != 1 ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
@@ -1350,20 +1343,20 @@ void SiofsClass::FsStat() {
 	memset(filename, 0x0, 64);
 	if ( serial->ReceiveBytes(filename, ret) != ret ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
 	
 	if ( fs_messages ) {
-		std::cout << "FS: File = " << filename << std::endl;
+		printf( "FS: File = %s\n", filename );
 	}
 	
 	memset(&st, 0, sizeof(SFS_STATSTRUCT));
 	
 	if ( stat(filename, &attr) < 0 ) {
 		if ( fs_messages ) {
-			std::cout << "FS: ERROR: File not found." << std::endl;
+			printf( "FS: ERROR: File not found.\n" );
 		}
 		st.size = -1;
 		serial->SendBytes(&st, 10);
@@ -1401,7 +1394,7 @@ void SiofsClass::FsChangeDir() {
 	ret = 0;
 	if ( serial->ReceiveBytes(&ret, 1) != 1 ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
@@ -1410,13 +1403,13 @@ void SiofsClass::FsChangeDir() {
 	memset(path, 0x0, 128);
 	if ( serial->ReceiveBytes(path, ret) != ret ) {
 		if ( fs_messages ) {
-			std::cout << "FS: Timeout." << std::endl;
+			printf( "FS: Timeout.\n" );
 		}
 		return;
 	}
 	
 	if ( fs_messages ) {
-		std::cout << "FS: Path = " << path << std::endl;
+		printf( "FS: Path = %s\n", path );
 	}
 	
 	if ( chdir(path) ) {

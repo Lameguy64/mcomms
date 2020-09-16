@@ -1,16 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/* 
- * File:   SerialClass.h
- * Author: Lameguy64
- *
- * Created on April 25, 2018, 9:24 AM
- */
-
 #ifndef SERIALCLASS_H
 #define SERIALCLASS_H
 
@@ -32,7 +19,7 @@ public:
 		ERROR_WRITE_FAIL,
 	};
 	
-	ErrorType OpenPort(const char* name, int rate);
+	ErrorType OpenPort(const char* name, int rate, int handshake = 0);
 	ErrorType SetRate(int rate);
 	void ClosePort();
 	

@@ -1,14 +1,3 @@
-/* 
- * File:   SerialClass.cpp
- * Author: Lameguy64
- * 
- * Created on April 25, 2018, 9:24 AM
- * 
- * Note: While there is some Linux support in place, it need some work
- * as last time I tested it on Linux it won't change the baud rate and
- * timeout settings need to be implemented.
- */
-
 #include <math.h>
 #include <stdio.h>
 #include <sys/file.h>
@@ -20,20 +9,20 @@
 #include <termios.h>
 #include <bits/time.h>
 #endif
-#include "SerialClass.h"
+#include "serial.h"
 
-SerialClass::SerialClass() {
-
+SerialClass::SerialClass()
+{
 #ifdef __WIN32__
 	hComm = INVALID_HANDLE_VALUE;
 #else
 	hComm = -1;
 #endif
 
-}
+} /* SerialClass::SerialClass */
 
-SerialClass::~SerialClass() {
-	
+SerialClass::~SerialClass()
+{	
 #ifdef __WIN32__
 	if ( hComm != INVALID_HANDLE_VALUE ) {
 		CloseHandle( hComm );
@@ -44,39 +33,65 @@ SerialClass::~SerialClass() {
 	}
 #endif
 	
-}
+} /* SerialClass::~SerialClass */
 
-SerialClass::ErrorType SerialClass::OpenPort(const char* name, int rate) {
-	
+SerialClass::ErrorType SerialClass::OpenPort(const char* name, int rate, int handshake)
+{	
 #ifdef __WIN32__
-	if ( hComm != INVALID_HANDLE_VALUE ) {
+
+	/* serial device open for Win32 */
+	
+	DCB dcbSerialParams;
+	
+	if( hComm != INVALID_HANDLE_VALUE )
+	{
 		CloseHandle( hComm );
 	}
 	
-	hComm = CreateFile( name,  //port name
-		GENERIC_READ | GENERIC_WRITE,	//Read/Write
+	hComm = CreateFile( name,			// port name
+		GENERIC_READ | GENERIC_WRITE,	// Read/Write
 		0,								// No Sharing
 		NULL,							// No Security
 		OPEN_EXISTING,					// Open existing port only
 		0,								// Non Overlapped I/O
 		NULL );							// Null for Comm Devices
 	 
-	if ( hComm == INVALID_HANDLE_VALUE ) {
-		return ERROR_OPENING;
+	if ( hComm == INVALID_HANDLE_VALUE )
+	{
+		return( ERROR_OPENING );
 	}
 	
-	DCB dcbSerialParams;
-	
-	if ( !GetCommState( hComm, &dcbSerialParams ) ) {
-		return ERROR_CONFIG;
+	if ( !GetCommState( hComm, &dcbSerialParams ) )
+	{
+		return( ERROR_CONFIG );
 	}
 	
-	dcbSerialParams.BaudRate = rate;	  // Setting BaudRate = 9600
-	dcbSerialParams.ByteSize = 8;         // Setting ByteSize = 8
-	dcbSerialParams.StopBits = ONESTOPBIT;// Setting StopBits = 1
-	dcbSerialParams.Parity   = NOPARITY;  // Setting Parity = None
+	dcbSerialParams.BaudRate		= rate;			// Setting BaudRate = rate
+	dcbSerialParams.ByteSize		= 8;			// Setting ByteSize = 8
+	dcbSerialParams.StopBits		= ONESTOPBIT;	// Setting StopBits = 1
+	dcbSerialParams.Parity			= NOPARITY;		// Setting Parity = None
 	
-	if ( !SetCommState( hComm, &dcbSerialParams ) ) {
+    dcbSerialParams.fOutxCtsFlow    = TRUE;
+    dcbSerialParams.fOutxDsrFlow    = TRUE;
+    dcbSerialParams.fDtrControl     = DTR_CONTROL_ENABLE;
+    dcbSerialParams.fDsrSensitivity = FALSE;
+    dcbSerialParams.fOutX           = FALSE;
+    dcbSerialParams.fInX            = FALSE;
+    dcbSerialParams.fErrorChar      = FALSE;
+    dcbSerialParams.fNull           = FALSE;
+    dcbSerialParams.fAbortOnError   = FALSE;
+	
+	if( handshake )
+	{
+		dcbSerialParams.fRtsControl	= RTS_CONTROL_HANDSHAKE;
+	}
+	else
+	{
+		dcbSerialParams.fRtsControl	= RTS_CONTROL_ENABLE;
+	}
+	
+	if( !SetCommState( hComm, &dcbSerialParams ) )
+	{
 		return ERROR_CONFIG;
 	}
 	
@@ -88,40 +103,44 @@ SerialClass::ErrorType SerialClass::OpenPort(const char* name, int rate) {
 	timeouts.WriteTotalTimeoutConstant   = 100; // in milliseconds
 	timeouts.WriteTotalTimeoutMultiplier = 10; // in milliseconds
 	
-	if ( !SetCommTimeouts( hComm, &timeouts ) ) {
+	if( !SetCommTimeouts( hComm, &timeouts ) )
+	{
 		return ERROR_CONFIG;
 	}
-			
+	
 #else
+	
+	/* serial device open routine for Linux */
 	
 	hComm = open( name , O_RDWR|O_NOCTTY );
 	
-	if ( hComm == -1 ) {
-		
+	if ( hComm == -1 )
+	{
 		return ERROR_OPENING;
-		
 	}
 	
-	if ( SetRate( 115200 ) != OK ) {
-		return ERROR_CONFIG;
+	if ( SetRate( 115200 ) != OK )
+	{
+		return( ERROR_CONFIG );
 	}
 	
 #endif
 	
-	return OK;
-}
+	return( OK );
+	
+} /* SerialClass::OpenPort */
 
 SerialClass::ErrorType SerialClass::SetRate(int rate) {
 
 #ifdef __WIN32__	
-	
+	DCB dcbSerialParams;
+
 	if ( hComm == INVALID_HANDLE_VALUE ) {
 		return ERROR_NOT_OPEN;
 	}
-	
-	DCB dcbSerialParams;
-	
-	if ( !GetCommState( hComm, &dcbSerialParams ) ) {
+		
+	if( !GetCommState( hComm, &dcbSerialParams ) )
+	{
 		return ERROR_CONFIG;
 	}
 	
@@ -130,18 +149,19 @@ SerialClass::ErrorType SerialClass::SetRate(int rate) {
 	dcbSerialParams.StopBits = ONESTOPBIT;	// Setting StopBits = 1
 	dcbSerialParams.Parity   = NOPARITY;	// Setting Parity = None
 	
-	if ( !SetCommState( hComm, &dcbSerialParams ) ) {
+	if ( !SetCommState( hComm, &dcbSerialParams ) )
+	{
 		return ERROR_CONFIG;
 	}
 	
 #else
-	
-	if ( hComm == -1 ) {
+	struct termios tty;
+
+	if ( hComm == -1 )
+	{
 		return ERROR_NOT_OPEN;
 	}
 	
-	struct termios tty;
-
 	/*
     if ( tcgetattr( hComm, &tty ) < 0 ) {
         return ERROR_CONFIG;
@@ -183,8 +203,8 @@ SerialClass::ErrorType SerialClass::SetRate(int rate) {
 	return OK;
 }
 
-int SerialClass::PendingBytes() {
-
+int SerialClass::PendingBytes()
+{
 #ifdef __WIN32__
 	
 	DWORD dwErrorFlags;
@@ -192,23 +212,21 @@ int SerialClass::PendingBytes() {
 
 	ClearCommError(hComm, &dwErrorFlags, &ComStat);
 
-	return((int)ComStat.cbInQue);
+	return( (int)ComStat.cbInQue );
 	
 #else
 	
 	int bytes;
 	ioctl(hComm, FIONREAD, &bytes);
-			
-	return bytes;
+	
+	return( bytes );
 	
 #endif
 	
-	
-	
-}
+} /* SerialClass::PendingBytes */
 
-int SerialClass::SendBytes(void* data, int length) {
-	
+int SerialClass::SendBytes(void* data, int length)
+{	
 #ifdef __WIN32__
 	DWORD bytesWritten;
 	
@@ -224,17 +242,19 @@ int SerialClass::SendBytes(void* data, int length) {
 	
 #endif
 	
-	return bytesWritten;
-}
+	return( bytesWritten );
+	
+} /* SerialClass::SendBytes */
 
-int SerialClass::ReceiveBytes(void* data, int bytes) {
-
+int SerialClass::ReceiveBytes(void* data, int bytes)
+{
 #ifdef __WIN32__
 
 	DWORD bytesReceived;
 	
-	if ( !ReadFile( hComm, data, bytes, &bytesReceived, NULL )  ) {
-		return -1;
+	if( !ReadFile( hComm, data, bytes, &bytesReceived, NULL )  )
+	{
+		return( -1 );
 	}
 	
 #else
@@ -257,15 +277,15 @@ int SerialClass::ReceiveBytes(void* data, int bytes) {
 	
 	} else {
 		
-		return -1;
+		return( -1 );
 		
 	}
 	
 #endif
 	
-	return bytesReceived;
+	return( bytesReceived );
 	
-}
+} /* SerialClass::ReceiveBytes */
 
 void SerialClass::ClosePort() {
 	

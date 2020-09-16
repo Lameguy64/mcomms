@@ -4,18 +4,23 @@ SioFS file access host, serial monitor with limited terminal support and loader 
 SioFS host supports opening/creating files, reading, writing, directory navigation and listing on the host side all done through serial. Originally developed for PlayStation homebrew purposes it can also be used for other devices with a serial interface as well.
 
 ## Compiling
-This program can be compiled using the MinGW GCC toolchain on Windows. Compatibility with Microsoft Visual C is not guaranteed.
-
-Compile by opening the project with Netbeans or execute 'mingw32-make CONF=Release' in a command line.
-
-This program can also be compiled on Linux but the serial routines need to be reworked.
+Building MCOMMS under Windows requires MinGW32 and MSys2. Simply run the makefile and it should produce an mcomms.exe file. Under Linux, the build-essential(s) package is required. Simply run the makefile and it should produce an mcomms executable file.
 
 ## Patcher binaries
-During the development of PSn00b Debugger a so called patch binary mechanism was implemented to allow for debug patches to be installed before uploading a program. Patch binaries are simply little binary executables that are always loaded to 0x80010000 and executed by the loader as a C function in which it can install patches and apply modifications to the kernel space.
+During the development of PSn00b Debugger, a so called patch binary mechanism was implemented to allow for debug monitor patches to be installed before uploading a PS-EXE to the target console. Patch binaries are simply little binary executables that are always loaded to 0x80010000 and executed by the loader as a C function, of which, will install patches and apply modifications to the kernel space to enable debugging functionality.
 
 For more information on how to make your own patch binaries please see LITELOAD's readme file.
 
 ## Changelog
+**Version 0.85 (09/16/2020, not yet Linux tested)**
+* Replaced std::couts with regular printf().
+* Improved some code formatting.
+* Ditched Netbeans project directory in favor of a simple makefile.
+* DTR and RTS lines now kept high by default for compatibility with flow
+  control enabled cables such as an FTDI232 with flow control lines wired,
+  HIT-SERIAL or Net Yaroze cable.
+* Added handshake enabled option for upcoming versions of n00bROM and
+LITELOAD.
 
 **Version 0.82 (11/18/2018)**
 * Updated protocol for LITELOAD 1.1. A command line option is available to revert back to LITELOAD 1.0's protocol.

@@ -1,16 +1,8 @@
-/* 
- * File:   SiofsClass.h
- * Author: Lameguy64
- *
- * Created on June 2, 2018, 9:07 PM
- */
-
 #ifndef SIOFSCLASS_H
 #define SIOFSCLASS_H
 
 #include <stdio.h>
 #include <dirent.h>
-#include "SerialClass.h"
 
 #define SIOFS_HANDLES	64
 #define SIOFS_READ		0x1
