@@ -162,24 +162,6 @@ SerialClass::ErrorType SerialClass::SetRate(int rate) {
 		return ERROR_NOT_OPEN;
 	}
 	
-	/*
-    if ( tcgetattr( hComm, &tty ) < 0 ) {
-        return ERROR_CONFIG;
-    }
-	
-    tty.c_cflag |= (CLOCAL | CREAD);    // ignore modem controls 
-    tty.c_cflag &= ~CSIZE;
-    tty.c_cflag |= CS8;					// 8-bit characters 
-    tty.c_cflag &= ~PARENB;				// no parity bit 
-    tty.c_cflag &= ~CSTOPB;				// only need 1 stop bit 
-    tty.c_cflag &= ~CRTSCTS;			// no hardware flowcontrol 
-	
-    // setup for non-canonical mode
-    tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
-    tty.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
-    tty.c_oflag &= ~OPOST;
-	*/
-	
 	memset(&tty, 0x0, sizeof(termios));
 	
 	tty.c_cflag = CS8|CLOCAL|CREAD;
@@ -187,8 +169,7 @@ SerialClass::ErrorType SerialClass::SetRate(int rate) {
 	tty.c_oflag = 0;
 	tty.c_lflag = 0;
 	
-	cfsetospeed(&tty, (speed_t)rate);
-    cfsetispeed(&tty, (speed_t)rate);
+	cfsetspeed(&tty, (speed_t)rate);
 	
     // fetch bytes as they become available
 	tty.c_cc[VMIN] = 0;

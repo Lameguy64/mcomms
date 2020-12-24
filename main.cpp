@@ -2,6 +2,8 @@
 #include <conio.h>
 #else
 #include <unistd.h>
+#include <termios.h>
+#include <signal.h>
 #endif
 
 #include <stdio.h>
@@ -288,7 +290,7 @@ int uploadEXE( const char* exefile, SerialClass* serial )
 		return( -1 );
 	}
 	
-	if ( strcmp( exe.header, "PS-X EXE" ) )
+	if ( memcmp( exe.header, "PS-X EXE", 8 ) )
 	{
 		buffer = (char*)loadCPE( fp, &param.params );
 		
@@ -459,19 +461,6 @@ void disable_raw_mode()
     tcsetattr(0, TCSANOW, &orig_term);
 }
 
-void term_func(int signum)
-{
-	if( do_exit )
-	{
-		close(lpt_fd);
-		disable_raw_mode();
-		exit(0);
-	}
-	
-	putchar('\n');
-	do_exit = 1;
-}
-
 int _kbhit()
 {    
 	struct timeval tv = { 0L, 0L };
@@ -488,9 +477,11 @@ void term_func(int signum)
 {
 	if( do_quit )
 	{
+		printf("Ok, I will kill myself.\n");
+		disable_raw_mode();
 		exit( 0 );
 	}
-	
+	printf("Catching SIGINT...\n");
 	serial.ClosePort();
 	
 	do_quit = 1;
@@ -765,7 +756,7 @@ int main( int argc, char** argv )
 		
 		while( _kbhit() )
 		{
-			keypress[keylen] = _getch();
+			keypress[keylen] = getchar();
 			keylen++;
 		}
 		
@@ -837,6 +828,10 @@ int main( int argc, char** argv )
 #endif
 	
 	}
+
+#ifndef __WIN32__
+	disable_raw_mode();
+#endif
 	
 	serial.ClosePort();
 	
