@@ -14,9 +14,10 @@
 #include <vector>
 
 #include "serial.h"
+#include "upload.h"
 #include "siofs.h"
 
-#define VERSION "0.85b"
+#define VERSION "0.86"
 
 #ifdef __WIN32__
 #define SERIAL_DEFAULT "COM1"
@@ -37,405 +38,6 @@ int terminal_mode = false;
 int no_console = false;
 int hex_mode = false;
 extern int fs_messages;
-
-
-#define CRC32_REMAINDER		0xFFFFFFFF
-
-void initTable32(unsigned int* table)
-{
-	int i,j;
-	unsigned int crcVal;
-
-	for( i=0; i<256; i++ )
-	{
-		crcVal = i;
-
-		for( j=0; j<8; j++ )
-		{
-			if (crcVal&0x00000001L)
-				crcVal = (crcVal>>1)^0xEDB88320L;
-			else
-				crcVal = crcVal>>1;
-		}
-
-		table[i] = crcVal;
-
-	}
-
-} /* initTable32 */
-
-unsigned int crc32(void* buff, int bytes, unsigned int crc)
-{
-	int	i;
-	unsigned char*	byteBuff = (unsigned char*)buff;
-	unsigned int	byte;
-	unsigned int	crcTable[256];
-
-    initTable32( crcTable );
-
-	for( i=0; i<bytes; i++ )
-	{
-		byte = 0x000000ffL&(unsigned int)byteBuff[i];
-		crc = (crc>>8)^crcTable[(crc^byte)&0xff];
-	}
-
-	return( crc^0xFFFFFFFF );
-
-} /* crc32 */
-
-typedef struct {
-	unsigned int pc0;
-	unsigned int gp0;
-	unsigned int t_addr;
-	unsigned int t_size;
-	unsigned int d_addr;
-	unsigned int d_size;
-	unsigned int b_addr;
-	unsigned int b_size;
-	unsigned int sp_addr;
-	unsigned int sp_size;
-	unsigned int sp;
-	unsigned int fp;
-	unsigned int gp;
-	unsigned int ret;
-	unsigned int base;
-} EXEC;
-
-typedef struct {
-	char header[8];
-	char pad[8];
-	EXEC params;
-	char license[64];
-	char pad2[1908];
-} PSEXE;
-
-typedef struct {
-	EXEC params;
-	unsigned int crc32;
-	unsigned int flags;
-} EXEPARAM;
-
-typedef struct {
-    int size;
-    unsigned int addr;
-    unsigned int crc32;
-} BINPARAM;
-
-void* loadCPE(FILE* fp, EXEC* param)
-{	
-	int v;
-	unsigned int uv;
-	
-	char* exe_buff = nullptr;
-	int exe_size = 0;
-	unsigned int exe_entry = 0;
-	
-	std::vector<unsigned int> addr_list;
-	
-	fseek( fp, 0, SEEK_SET );
-	fread( &v, 1, 4, fp );
-	
-	if( v != 0x01455043 )
-	{
-		printf( "ERROR: File is not a PlayStation EXE or CPE file.\n" );
-		return nullptr;
-	}
-	
-	memset( param, 0x0, sizeof(EXEC) );
-	
-	v = 0;
-	fread( &v, 1, 1, fp );
-	
-	while( v )
-	{
-		switch( v )
-		{
-		case 0x1:
-			
-			fread( &uv, 1, 4, fp );
-			fread( &v, 1, 4, fp );
-			
-			addr_list.push_back( uv );
-			exe_size += v;
-			
-			fseek( fp, v, SEEK_CUR );
-			
-			break;
-			
-		case 0x3:
-			
-			v = 0;
-			fread( &v, 1, 2, fp );
-			
-			if( v != 0x90 )
-			{
-				printf( "ERROR: Unknown SETREG code: %d\n" );
-				return nullptr;
-			}
-			
-			fread( &exe_entry, 1, 4, fp );
-			
-			break;
-			
-		case 0x8:	// Select unit
-			
-			v = 0;
-			fread( &v, 1, 1, fp );
-			
-			break;
-			
-		default:
-			printf( "Unknown chunk found: %d\n", v );
-			return nullptr;
-		}
-		
-		v = 0;
-		fread(&v, 1, 1, fp);
-		
-	}
-	
-	unsigned int addr_upper=0;
-	unsigned int addr_lower=0;
-	
-	for( int i=0; i<addr_list.size(); i++ )
-	{
-		if( addr_list[i] > addr_upper )
-		{
-			addr_upper = addr_list[i];
-		}
-	}
-	
-	addr_lower = addr_upper;
-	
-	for( int i=0; i<addr_list.size(); i++ )
-	{
-		if( addr_list[i] < addr_lower )
-		{
-			addr_lower = addr_list[i];
-		}
-	}
-	
-	exe_size = 2048*((exe_size+2047)/2048);
-	
-	exe_buff = (char*)malloc( exe_size );
-	memset( exe_buff, 0x0, exe_size );
-	
-	v = 0;
-	fseek( fp, 4, SEEK_SET);
-	fread( &v, 1, 1, fp );
-	
-	while( v )
-	{	
-		switch( v )
-		{
-		case 0x1:
-			
-			fread( &uv, 1, 4, fp );
-			fread( &v, 1, 4, fp );
-			
-			fread( exe_buff+(uv-addr_lower), 1, v, fp );
-			
-			break;
-			
-		case 0x3:
-			
-			v = 0;
-			fread( &v, 1, 2, fp );
-			
-			if ( v == 0x90 )
-				fseek( fp, 4, SEEK_CUR);
-			
-			break;
-			
-		case 0x8:
-			
-			fseek( fp, 1, SEEK_CUR);
-			
-			break;
-		}
-		
-		v = 0;
-		fread( &v, 1, 1, fp );
-		
-	}
-	
-	param->pc0 = exe_entry;
-	param->t_addr = addr_lower;
-	param->t_size = exe_size;
-	param->sp_addr = 0x801ffff0;
-	
-	return( exe_buff );
-	
-} /* loadCPE */
-
-int uploadEXE( const char* exefile, SerialClass* serial )
-{
-	
-	PSEXE exe;
-	EXEPARAM param;
-	char* buffer;
-	
-	FILE* fp = fopen(exefile, "rb");
-	
-	if( fp == nullptr )
-	{
-		printf( "ERROR: File not found.\n" );
-		return( -1 );
-	}
-	
-	if( fread( &exe, 1, sizeof(PSEXE), fp) != sizeof(PSEXE) )
-	{
-		printf( "ERROR: Read error or invalid file.\n" );
-		fclose( fp );
-		return( -1 );
-	}
-	
-	if ( memcmp( exe.header, "PS-X EXE", 8 ) )
-	{
-		buffer = (char*)loadCPE( fp, &param.params );
-		
-		if( buffer == nullptr )
-		{
-			fclose( fp );
-			return( -1 );
-		}
-		
-	}
-	else
-	{
-		buffer = (char*)malloc( exe.params.t_size );
-	
-		if ( fread( buffer, 1, exe.params.t_size, fp ) != exe.params.t_size )
-		{
-			printf( "ERROR: Incomplete file or read error occurred.\n" );
-			free( buffer );
-			fclose(fp);
-			
-			return( -1 );
-		}
-		
-		memcpy( &param.params, &exe.params, sizeof(EXEPARAM) );
-		
-	}
-	
-	fclose( fp );
-	
-	param.crc32 = crc32( buffer, param.params.t_size, CRC32_REMAINDER );
-	param.flags = 0;
-	
-	serial->SendBytes( (void*)"MEXE", 4 );
-	
-	char reply[4];
-	int timeout = true;
-	for( int i=0; i<10; i++ )
-	{
-		if( serial->ReceiveBytes( reply, 1 ) > 0 )
-		{
-			timeout = false;
-			break;
-		}
-		Sleep(10);
-	}
-	
-	if( timeout )
-	{
-		printf( "ERROR: No response from console.\n" );
-		return( -1 );
-	}
-	
-	if( reply[0] != 'K' )
-	{
-		printf( "ERROR: No valid response from console.\n" );
-		return -1;
-	}
-	
-	if( !old_protocol )
-	{
-		serial->SendBytes( &param, sizeof(EXEPARAM) );
-	}
-	else
-	{
-		serial->SendBytes( &param, sizeof(EXEPARAM)-4 );
-	}
-	
-	Sleep( 20 );
-	serial->SendBytes( buffer, param.params.t_size );
-	
-	free( buffer );
-	
-	return( 0 );
-	
-} /* uploadEXE */
-
-int uploadBIN( const char* file, unsigned int addr, SerialClass* serial, int patch )
-{
-	BINPARAM param;
-	char* buffer;
-	
-	FILE* fp = fopen( file, "rb" );
-	
-	if( fp == nullptr )
-	{
-		printf( "ERROR: File not found.\n" );
-		return( -1 );
-	}
-	
-	fseek( fp, 0, SEEK_END );
-	param.size = ftell( fp );
-	fseek( fp, 0, SEEK_SET );
-	
-	buffer = (char*)malloc( param.size );
-	
-	if( fread( buffer, 1, param.size, fp ) != param.size )
-	{
-		printf( "ERROR: Read error occurred.\n" );
-		free( buffer );
-		fclose( fp );
-		return( -1 );
-	}
-	
-	fclose( fp );
-	
-	if( patch )
-	{
-		serial->SendBytes( (void*)"MPAT", 4 );
-	}
-	else
-	{
-		serial->SendBytes( (void*)"MBIN", 4 );
-	}
-	
-	char reply[4];
-	int timeout = true;
-	
-	for( int i=0; i<10; i++ )
-	{
-		if ( serial->ReceiveBytes( reply, 1 ) > 0 )
-		{
-			timeout = false;
-			break;
-		}
-		Sleep( 10 );
-	}
-	
-	if( timeout )
-	{
-		printf( "ERROR: No response from console.\n" );
-		return( -1 );
-	}
-	
-	param.addr = addr;
-	param.crc32 = crc32( buffer, param.size, CRC32_REMAINDER );
-	
-	serial->SendBytes( &param, sizeof(BINPARAM) );
-	Sleep( 20 );
-	serial->SendBytes( buffer, param.size );
-	
-	free( buffer );
-	
-	return( 0 );
-	
-} /* uploadBIN */
 
 int do_quit;
 
@@ -491,7 +93,7 @@ void term_func(int signum)
 #endif /* __WIN32__ */
 
 int main( int argc, char** argv )
-{	
+{
 #ifndef __WIN32
 	struct sigaction st;
 #endif // __WIN32
@@ -513,28 +115,28 @@ int main( int argc, char** argv )
 			printf( "  [up <file> <addr>] [run <exefile>]\n\n" );
 
 			printf( "    -dev <device> - Specify serial port device (default: " SERIAL_DEFAULT ").\n" );
-			printf( "    -baud <rate>  - Specify serial baud rate (default: 115200).\n" );
-			printf( "                    Note: This does not affect the rate used for PS-EXE upload.\n" );
-			printf( "    -dir <path>   - Specify initial host directory for SIOFS.\n" );
-			printf( "    -term         - Enable terminal mode (forward keystrokes to serial).\n" );
-			printf( "    -hex          - Output received data in hex.\n" );
+			printf( "    -baud <rate>  - Specify serial console baud rate (default: 115200).\n" );
+			printf( "                    Note: PS-EXE and binary uploads still use 115200 baud.\n" );
+			printf( "    -dir <path>   - Specify initial directory for SIOFS.\n" );
+			//printf( "    -term         - Enable terminal mode (forward keystrokes to serial).\n" );
+			printf( "    -hex          - Output received bytes in hex.\n" );
 			printf( "    -fsmsg        - Output SIOFS messages.\n" );
-			printf( "    -nocons       - Quit immediately, no console mode.\n" );
+			printf( "    -nocons       - Upload only, no console mode.\n" );
 			printf( "    -hshake       - Enable serial handshake, DTR and RTS always high otherwise.\n" );
 			printf( "    -old          - Use old LITELOAD 1.0 protocol.\n\n" );
 
-			printf( "  LITELOAD Parameters (catflap inspired):\n" );
+			printf( "  LITELOAD Commands (catflap inspired):\n" );
 			printf( "    up <file> <addr> - Upload a file to specified address.\n" );
 			printf( "    patch <file>     - Upload a patch binary.\n" );
 			printf( "    run <file>       - Upload a PS-EXE file (CPE format is supported).\n" );
-			printf( "    Specified memory address must be in hex.\n\n" );
+			printf( "    Memory address must be specified in hex.\n\n" );
 
-			printf( "  Defaults can be changed with environment variables:\n" );
+			printf( "  Serial defaults can be changed with environment variables:\n" );
 			printf( "    MC_DEVICE - Serial device.\n" );
 			printf( "    MC_BAUD   - Baud rate.\n" );
+			printf( "    MC_HSHAKE - Hardware handshake (specify true or false).\n" );
 
 			return( EXIT_SUCCESS );
-			
 		}
 	}
 	
@@ -660,7 +262,13 @@ int main( int argc, char** argv )
 		}
 		
 	}
-	
+
+#ifdef __WIN32
+	printf( "Using %s...\n", serial_device.c_str() );
+#else
+	printf( "Using serial device %s...\n", serial_device.c_str() );
+#endif
+
 	// Open serial port
 	switch( serial.OpenPort( serial_device.c_str(), serial_baud, hshake ) )
 	{
@@ -721,16 +329,8 @@ int main( int argc, char** argv )
 		return( EXIT_SUCCESS );
 	}
 	
-	printf( "Listening %s at %d baud.\n", serial_device.c_str(), serial_baud );
-	
-	if ( !terminal_mode )
-	{
-		printf( "Press ESC to quit...\n\n" );
-	}
-	else
-	{
-		printf( "Terminal Mode! Press Ctrl+C to quit...\n\n" );
-	}
+	printf( "Listening at %d baud.\n", serial_baud );
+	printf( "Press Ctrl+C to quit...\n---\n" );
 	
 #ifndef __WIN32__
 	
@@ -754,33 +354,23 @@ int main( int argc, char** argv )
 		// Read characters
 		keylen = 0;
 		
+#ifdef __WIN32
 		while( _kbhit() )
 		{
-			keypress[keylen] = getchar();
+			keypress[keylen] = _getch();
 			keylen++;
 		}
+#else
+		if( _kbhit() )
+		{
+			if( read( 0, &keypress[keylen], 1 ) > 0 )
+				keylen++;
+		}
+#endif
 		
 		if( keylen > 0 )
 		{
-			if( keypress[0] == 224 )
-			{
-				if( keypress[1] == 134 )
-				{
-					quit = true;
-				}
-			}
-			
-			if( terminal_mode )
-			{
-				serial.SendBytes( keypress, keylen );
-			}
-			else
-			{
-				if( keypress[0] == 27 )
-				{
-					quit = true;
-				}
-			}
+			serial.SendBytes( keypress, keylen );
 		}
 		
 		memset( buffer, 0, 256 );
@@ -791,28 +381,32 @@ int main( int argc, char** argv )
 			
 			if( len > 0 )
 			{
+				// if it contains a tilde, check if it is a SIOFS command
 				if( strchr( buffer, '~' ) )
 				{
 					if( siofs.Query( strchr( buffer, '~' ), &serial ) )
 					{
+						// if command was recognized, trim off the command
 						*strchr( buffer, '~' ) = 0x0;
 						len -= 4;
 					}
 				}
 
+				// output received text
 				if ( !hex_mode )
 				{
-					fputs( buffer, stdout );
+					fwrite( buffer, 1, len, stdout );
 					fflush( stdout );
 				}
 				else
 				{
-					for(int i=0; i<len; i++) {
+					for( int i=0; i<len; i++ )
+					{
 						
 						int val = *((unsigned char*)&buffer[i]);
 						printf( "%02x,", val );
 						
-						if ( (i%4) == 3 )
+						if( (i%4) == 3 )
 						{
 							putchar( '\n' );
 						}
@@ -824,7 +418,7 @@ int main( int argc, char** argv )
 		}
 		
 #ifndef __WIN32__
-		usleep(1000);
+		usleep( 1000 );
 #endif
 	
 	}

@@ -84,6 +84,7 @@ SerialClass::ErrorType SerialClass::OpenPort(const char* name, int rate, int han
 	if( handshake )
 	{
 		dcbSerialParams.fRtsControl	= RTS_CONTROL_HANDSHAKE;
+		printf( "Hardware handshake enabled.\n" );
 	}
 	else
 	{
@@ -110,19 +111,55 @@ SerialClass::ErrorType SerialClass::OpenPort(const char* name, int rate, int han
 	
 #else
 	
+	struct termios tty;
+	
 	/* serial device open routine for Linux */
 	
 	hComm = open( name , O_RDWR|O_NOCTTY );
 	
 	if ( hComm == -1 )
 	{
-		return ERROR_OPENING;
+		return( ERROR_OPENING );
 	}
 	
-	if ( SetRate( 115200 ) != OK )
+	/* configure the serial device */
+	tcgetattr( hComm, &tty );
+	
+	/* setup serial UART (this works best for me -Lameguy64) */
+	tty.c_cflag |= (CLOCAL | CREAD);    // ignore modem controls 
+	tty.c_cflag &= ~CSIZE;
+	tty.c_cflag |= CS8;					// 8-bit characters 
+	tty.c_cflag &= ~PARENB;				// no parity bit 
+	tty.c_cflag &= ~CSTOPB;				// only need 1 stop bit 
+	tty.c_cflag &= ~CRTSCTS;			// no hardware flowcontrol 
+	
+	// setup for non-canonical mode
+	tty.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+	tty.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+	tty.c_oflag &= ~OPOST;
+	
+	/* set flow control if enabled */
+	if( handshake )
 	{
-		return( ERROR_CONFIG );
+		printf( "Hardware handshake enabled.\n" );
+		tty.c_cflag |= CRTSCTS;
 	}
+	
+	/* ignore parity errors */
+	tty.c_iflag = IGNPAR;
+	
+	/* set the baud rate */
+	cfsetspeed( &tty, (speed_t)rate );
+	
+	/* fetch bytes as they become available */
+	tty.c_cc[VMIN] = 0;
+	tty.c_cc[VTIME] = 2;
+		
+	/* apply port configuration */
+	if ( tcsetattr( hComm, TCSANOW, &tty ) != 0 )
+	{
+        return( ERROR_CONFIG );
+    }
 	
 #endif
 	
@@ -133,6 +170,7 @@ SerialClass::ErrorType SerialClass::OpenPort(const char* name, int rate, int han
 SerialClass::ErrorType SerialClass::SetRate(int rate) {
 
 #ifdef __WIN32__	
+
 	DCB dcbSerialParams;
 
 	if ( hComm == INVALID_HANDLE_VALUE ) {
@@ -155,6 +193,7 @@ SerialClass::ErrorType SerialClass::SetRate(int rate) {
 	}
 	
 #else
+
 	struct termios tty;
 
 	if ( hComm == -1 )
@@ -162,26 +201,18 @@ SerialClass::ErrorType SerialClass::SetRate(int rate) {
 		return ERROR_NOT_OPEN;
 	}
 	
-	memset(&tty, 0x0, sizeof(termios));
+	tcgetattr( hComm, &tty );
 	
-	tty.c_cflag = CS8|CLOCAL|CREAD;
-	tty.c_iflag = IGNPAR;
-	tty.c_oflag = 0;
-	tty.c_lflag = 0;
+	cfsetspeed( &tty, (speed_t)rate );
 	
-	cfsetspeed(&tty, (speed_t)rate);
-	
-    // fetch bytes as they become available
-	tty.c_cc[VMIN] = 0;
-	tty.c_cc[VTIME] = 2;
-
-    if ( tcsetattr( hComm, TCSANOW, &tty ) != 0 ) {
-        return ERROR_CONFIG;
+    if ( tcsetattr( hComm, TCSANOW, &tty ) != 0 )
+	{
+        return( ERROR_CONFIG );
     }
 	
 #endif
 	
-	return OK;
+	return( OK );
 }
 
 int SerialClass::PendingBytes()
