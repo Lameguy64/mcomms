@@ -495,7 +495,10 @@ int uploadEXE( const char* exefile, SerialClass* serial )
 			/(param.params.t_size>>2)))/1024;
 		if( progress > last_progress )
 		{
-			printf( "#" );
+			for( int i=0; i<(progress-last_progress); i++ )
+			{
+				printf( "#" );
+			}
 			fflush( stdout );
 			last_progress = progress;
 		}
@@ -607,7 +610,10 @@ int uploadBIN( const char* file, unsigned int addr, SerialClass* serial, int pat
 			/(param.size>>2)))/1024;
 		if( progress > last_progress )
 		{
-			printf( "#" );
+			for( int i=0; i<(progress-last_progress); i++ )
+			{
+				printf( "#" );
+			}
 			fflush( stdout );
 			last_progress = progress;
 		}

@@ -70,25 +70,20 @@ SerialClass::ErrorType SerialClass::OpenPort(const char* name, int rate, int han
 	dcbSerialParams.ByteSize		= 8;			// Setting ByteSize = 8
 	dcbSerialParams.StopBits		= ONESTOPBIT;	// Setting StopBits = 1
 	dcbSerialParams.Parity			= NOPARITY;		// Setting Parity = None
-	
-    dcbSerialParams.fOutxCtsFlow    = TRUE;
-    dcbSerialParams.fOutxDsrFlow    = TRUE;
-    dcbSerialParams.fDtrControl     = DTR_CONTROL_ENABLE;
-    dcbSerialParams.fDsrSensitivity = FALSE;
-    dcbSerialParams.fOutX           = FALSE;
-    dcbSerialParams.fInX            = FALSE;
-    dcbSerialParams.fErrorChar      = FALSE;
-    dcbSerialParams.fNull           = FALSE;
-    dcbSerialParams.fAbortOnError   = FALSE;
-	
+	dcbSerialParams.fDtrControl		= DTR_CONTROL_ENABLE;
+		
 	if( handshake )
 	{
-		dcbSerialParams.fRtsControl	= RTS_CONTROL_HANDSHAKE;
+		dcbSerialParams.fOutxCtsFlow    = TRUE;
+		dcbSerialParams.fOutxDsrFlow    = TRUE;
+		dcbSerialParams.fRtsControl		= RTS_CONTROL_HANDSHAKE;
 		printf( "Hardware handshake enabled.\n" );
 	}
 	else
 	{
-		dcbSerialParams.fRtsControl	= RTS_CONTROL_ENABLE;
+		dcbSerialParams.fOutxCtsFlow    = FALSE;
+		dcbSerialParams.fOutxDsrFlow    = FALSE;
+		dcbSerialParams.fRtsControl		= RTS_CONTROL_ENABLE;
 	}
 	
 	if( !SetCommState( hComm, &dcbSerialParams ) )
@@ -98,11 +93,11 @@ SerialClass::ErrorType SerialClass::OpenPort(const char* name, int rate, int han
 	
 	COMMTIMEOUTS timeouts;
 	
-	timeouts.ReadIntervalTimeout         = 100; // in milliseconds
-	timeouts.ReadTotalTimeoutConstant    = 100; // in milliseconds
-	timeouts.ReadTotalTimeoutMultiplier  = 10; // in milliseconds
-	timeouts.WriteTotalTimeoutConstant   = 100; // in milliseconds
-	timeouts.WriteTotalTimeoutMultiplier = 10; // in milliseconds
+	timeouts.ReadIntervalTimeout         = 50;
+	timeouts.ReadTotalTimeoutConstant    = 50;
+	timeouts.ReadTotalTimeoutMultiplier  = 2;
+	timeouts.WriteTotalTimeoutConstant   = 50;
+	timeouts.WriteTotalTimeoutMultiplier = 2;
 	
 	if( !SetCommTimeouts( hComm, &timeouts ) )
 	{

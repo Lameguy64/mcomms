@@ -1,7 +1,7 @@
 TARGET		= mcomms
 
 CFILES		= 
-CXXFILES	= main.cpp serial.cpp siofs.cpp
+CXXFILES	= main.cpp serial.cpp siofs.cpp upload.cpp
 
 ifeq ($(OS),Windows_NT)
 

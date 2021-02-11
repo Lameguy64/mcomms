@@ -17,7 +17,7 @@
 #include "upload.h"
 #include "siofs.h"
 
-#define VERSION "0.86"
+#define VERSION "0.87"
 
 #ifdef __WIN32__
 #define SERIAL_DEFAULT "COM1"
@@ -90,6 +90,23 @@ void term_func(int signum)
 	
 } /* term_func */
 
+#else
+
+BOOL WINAPI term_func(DWORD dwCtrlType)
+{
+	if( do_quit )
+	{
+		printf("Ok, I will commit sepukku.\n");
+		exit(0);
+	}
+	
+	printf("Catching Ctrl+C...\n");
+	serial.ClosePort();
+	
+	putchar('\n');
+	do_quit = 1;
+}
+
 #endif /* __WIN32__ */
 
 int main( int argc, char** argv )
@@ -122,7 +139,7 @@ int main( int argc, char** argv )
 			printf( "    -hex          - Output received bytes in hex.\n" );
 			printf( "    -fsmsg        - Output SIOFS messages.\n" );
 			printf( "    -nocons       - Upload only, no console mode.\n" );
-			printf( "    -hshake       - Enable serial handshake, DTR and RTS always high otherwise.\n" );
+			printf( "    -hshake       - Enable serial flow control, DTR and RTS always set otherwise.\n" );
 			printf( "    -old          - Use old LITELOAD 1.0 protocol.\n\n" );
 
 			printf( "  LITELOAD Commands (catflap inspired):\n" );
@@ -148,6 +165,17 @@ int main( int argc, char** argv )
 	if( getenv( "MC_BAUD" ) )
 	{
 		serial_baud = atoi( getenv( "MC_BAUD" ) );
+	}
+	if( getenv( "MC_HSHAKE" ) )
+	{
+		if( strcasecmp( getenv( "MC_HSHAKE" ), "true" ) == 0 )
+		{
+			hshake = true;
+		}
+		else
+		{
+			hshake = false;
+		}
 	}
 	
 	for( int i=1; i<argc; i++ )
@@ -342,6 +370,10 @@ int main( int argc, char** argv )
 	
 	enable_raw_mode();
 	
+#else
+
+	SetConsoleCtrlHandler(term_func, TRUE);
+
 #endif /* __WIN32__ */
 	
 	unsigned char keypress[4] = {0};
